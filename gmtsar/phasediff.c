@@ -313,6 +313,27 @@ int main(int argc, char **argv) {
 	intfp = (fcomplex *)malloc(xdim * sizeof(fcomplex));
 	iptr1 = (fcomplex *)malloc(xdim * sizeof(fcomplex));
 	iptr2 = (fcomplex *)malloc(xdim * sizeof(fcomplex));
+	
+		// edited by Alex on 7-jun-2016
+
+	float *masterbuffer, *slavebuffer, *IFGbuffer;
+	if (( masterbuffer = (float *) malloc(2 * sizeof(float)*xdim*ydim)) == NULL) die("memory allocation","");
+	if (( slavebuffer = (float *) malloc(2 * sizeof(float)*xdim*ydim)) == NULL) die("memory allocation","");
+	if (( IFGbuffer = (float *) malloc(2 * sizeof(float)*xdim*ydim)) == NULL) die("memory allocation","");
+
+	for (k=0;k<ydim;k++){
+		for (j=0; j<xdim; j++)
+		{
+			masterbuffer[(j*2)+ k*xdim*2] = (float) 0;
+			masterbuffer[(j*2+1)+ k*xdim*2] = (float) 0;
+			slavebuffer[(j*2)+ k*xdim*2] = (float) 0;
+			slavebuffer[(j*2+1)+ k*xdim*2] = (float) 0;
+			IFGbuffer[(j*2)+ k*xdim*2] = (float) 0;
+			IFGbuffer[(j*2+1)+ k*xdim*2] = (float) 0;
+		}
+	}
+
+	// end edit by Alex
 
 	d1 = (short *)malloc(2 * xdim * sizeof(short));
 	d2 = (short *)malloc(2 * xdim * sizeof(short));
@@ -555,11 +576,22 @@ else {
 			// iptr2[k].r = 1.0;
 			// iptr2[k].i = 1.0;
 			//
-
+			// edited by Alex on 10-jun-2016
+			masterbuffer[(k*2)+ left_node*2] = iptr1[k].r;
+			masterbuffer[(k*2+1)+ left_node*2] = iptr1[k].i;
+			slavebuffer[(k*2)+ left_node*2] = iptr2[k].r;
+			slavebuffer[(k*2+1)+ left_node*2] = iptr2[k].i;
+			//end edited by Alex
+			
 			iptr2[k] = Conjg(iptr2[k]);
 			intfp[k] = Cmul(intfp[k], iptr2[k]);
 			RE->data[left_node + k] = intfp[k].r;
 			IM->data[left_node + k] = intfp[k].i;
+			
+			// edited by Alex on 10-jun-2016
+			IFGbuffer[(k*2)+ left_node*2] = intfp[k].r;
+			IFGbuffer[(k*2+1)+ left_node*2] = intfp[k].i;
+			//end edited by Alex
 		}
 	}
 
@@ -569,6 +601,39 @@ else {
 	if (GMT_Write_Data(API, GMT_IS_GRID, GMT_IS_FILE, GMT_IS_SURFACE, GMT_GRID_ALL, NULL, "imag.grd=bf", IM)) {
 		die("Failed to update imag.grd grid header", "");
 	}
+
+		// edited by Alex on 10-jun-2016
+	FILE *fp = NULL,*fp1 = NULL,*fp2 = NULL;
+
+	fp = fopen( "master_SLC.r00" , "w" );
+	fwrite(masterbuffer, sizeof(float), 2*xdim*ydim, fp);
+	fclose(fp);
+
+	fp1 = fopen( "slave_SLC.r00" , "w" );
+	fwrite(slavebuffer, sizeof(float), 2*xdim*ydim, fp1);
+	fclose(fp1);
+
+	fp2 = fopen( "IFG_SLC.r00" , "w" );
+	fwrite(IFGbuffer, sizeof(float), 2*xdim*ydim, fp2);
+	fclose(fp2);
+
+	free(masterbuffer);
+	masterbuffer=NULL;
+	free(slavebuffer);
+	slavebuffer=NULL;
+	free(IFGbuffer);
+	IFGbuffer=NULL;
+	char *str1, *str2, *str3;
+
+	asprintf(&str1, "CreateMatrixHeader -b master_SLC.r00 -f CF4 -s %d/%d", ydim, xdim);
+	asprintf(&str2, "CreateMatrixHeader -b slave_SLC.r00 -f CF4 -s %d/%d", ydim, xdim);
+	asprintf(&str3, "CreateMatrixHeader -b IFG_SLC.r00 -f CF4 -s %d/%d", ydim, xdim);
+
+	system(str1);
+	system(str2);
+	system(str3);
+
+	//end edited by Alex
 
 	if (GMT_Destroy_Session(API))
 		return EXIT_FAILURE; /* Remove the GMT machinery */
