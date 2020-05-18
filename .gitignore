@@ -239,3 +239,5 @@ snaphu/src/snaphu_io.o
 snaphu/src/snaphu_solver.o
 snaphu/src/snaphu_tile.o
 snaphu/src/snaphu_util.o
+/.vs/gmtsar/v15/.suo
+/.vs
